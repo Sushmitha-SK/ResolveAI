@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import axios from "axios";
+import ReactMarkdown from "react-markdown";
 
 const TicketDetails = () => {
     const { id } = useParams();
@@ -8,7 +9,6 @@ const TicketDetails = () => {
     const [loading, setLoading] = useState(true);
 
     const token = localStorage.getItem("token");
-
 
     useEffect(() => {
         const fetchTicket = async () => {
@@ -21,15 +21,9 @@ const TicketDetails = () => {
                         },
                     }
                 );
-
                 setTicket(res.data.ticket);
-
             } catch (err) {
-                if (err.response) {
-                    alert(err.response.data.message || "Failed to fetch ticket");
-                } else {
-                    alert("Something went wrong");
-                }
+                alert(err.response?.data?.message || "Failed to fetch ticket");
                 console.error(err);
             } finally {
                 setLoading(false);
@@ -39,63 +33,85 @@ const TicketDetails = () => {
         fetchTicket();
     }, [id]);
 
-    if (loading)
-        return <div className="text-center mt-10">Loading ticket details...</div>;
-    if (!ticket) return <div className="text-center mt-10">Ticket not found</div>;
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center min-h-[50vh]">
+                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-blue-500"></div>
+            </div>
+        );
+    }
+
+    if (!ticket) {
+        return (
+            <div className="text-center mt-10 text-gray-500">Ticket not found</div>
+        );
+    }
+
+    const statusColors = {
+        Open: "bg-green-100 text-green-800",
+        Closed: "bg-red-100 text-red-800",
+        Pending: "bg-yellow-100 text-yellow-800",
+    };
 
     return (
-        <div className="max-w-3xl mx-auto p-4">
-            <h2 className="text-2xl font-bold mb-4">Ticket Details</h2>
+        <div className="max-w-3xl mx-auto p-6">
+            <div className="flex items-center justify-between mb-6">
+                <h2 className="text-3xl font-bold text-gray-800">{ticket.title}</h2>
+                <span
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[ticket.status] || "bg-gray-200 text-gray-700"
+                        }`}
+                >
+                    {ticket.status || "N/A"}
+                </span>
+            </div>
 
-            <div className="card bg-gray-800 shadow p-4 space-y-4">
-                <h3 className="text-xl font-semibold">{ticket.title}</h3>
-                <p>{ticket.description}</p>
+            <div className="bg-white shadow-md rounded-xl p-6 space-y-4 border border-gray-100">
+                <p className="text-gray-700 leading-relaxed">{ticket.description}</p>
 
-                {/* Conditionally render extended details */}
-                {ticket.status && (
-                    <>
-                        <div className="divider">Metadata</div>
+                <div className="border-t pt-4 space-y-2">
+                    {ticket.priority && (
                         <p>
-                            <strong>Status:</strong> {ticket.status}
+                            <strong className="text-gray-800">Priority:</strong>{" "}
+                            <span className="text-gray-600">{ticket.priority}</span>
                         </p>
-                        {ticket.priority && (
-                            <p>
-                                <strong>Priority:</strong> {ticket.priority}
-                            </p>
-                        )}
+                    )}
 
-                        {ticket.relatedSkills?.length > 0 && (
-                            <p>
-                                <strong>Related Skills:</strong>{" "}
+                    {ticket.relatedSkills?.length > 0 && (
+                        <p>
+                            <strong className="text-gray-800">Related Skills:</strong>{" "}
+                            <span className="text-gray-600">
                                 {ticket.relatedSkills.join(", ")}
-                            </p>
-                        )}
+                            </span>
+                        </p>
+                    )}
 
-                        {ticket.helpfulNotes && (
-                            <div>
-                                <strong>Helpful Notes:</strong>
-                                <div className="prose max-w-none rounded mt-2">
-                                    <ReactMarkdown>{ticket.helpfulNotes}</ReactMarkdown>
-                                </div>
-                            </div>
-                        )}
+                    {ticket.assignedTo && (
+                        <p>
+                            <strong className="text-gray-800">Assigned To:</strong>{" "}
+                            <span className="text-gray-600">
+                                {ticket.assignedTo?.email}
+                            </span>
+                        </p>
+                    )}
 
-                        {ticket.assignedTo && (
-                            <p>
-                                <strong>Assigned To:</strong> {ticket.assignedTo?.email}
-                            </p>
-                        )}
+                    {ticket.createdAt && (
+                        <p className="text-sm text-gray-500">
+                            Created At: {new Date(ticket.createdAt).toLocaleString()}
+                        </p>
+                    )}
+                </div>
 
-                        {ticket.createdAt && (
-                            <p className="text-sm text-gray-500 mt-2">
-                                Created At: {new Date(ticket.createdAt).toLocaleString()}
-                            </p>
-                        )}
-                    </>
+                {ticket.helpfulNotes && (
+                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mt-4">
+                        <strong className="block mb-2 text-blue-800">Helpful Notes:</strong>
+                        <div className="prose prose-sm max-w-none text-gray-700">
+                            <ReactMarkdown>{ticket.helpfulNotes}</ReactMarkdown>
+                        </div>
+                    </div>
                 )}
             </div>
         </div>
-    )
-}
+    );
+};
 
-export default TicketDetails
+export default TicketDetails;

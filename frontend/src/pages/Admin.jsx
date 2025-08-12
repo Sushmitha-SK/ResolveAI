@@ -1,36 +1,24 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react';
 import axios from "axios";
 
 const Admin = () => {
-
-    const [users, setUsers] = useState([])
+    const [users, setUsers] = useState([]);
     const [filteredUsers, setFilteredUsers] = useState([]);
     const [editingUser, setEditingUser] = useState(null);
     const [formData, setFormData] = useState({ role: "", skills: "" });
     const [searchQuery, setSearchQuery] = useState("");
-
     const token = localStorage.getItem("token");
 
     const fetchUsers = async () => {
         try {
             const res = await axios.get(
                 `${import.meta.env.VITE_SERVER_URL}/auth/users`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
+                { headers: { Authorization: `Bearer ${token}` } }
             );
-
             setUsers(res.data);
             setFilteredUsers(res.data);
-
         } catch (err) {
-            if (err.response) {
-                console.error(err.response.data.error || "Error fetching users");
-            } else {
-                console.error("Error fetching users", err);
-            }
+            console.error(err.response?.data?.error || "Error fetching users");
         }
     };
 
@@ -41,7 +29,6 @@ const Admin = () => {
             skills: user.skills?.join(", "),
         });
     };
-
 
     const handleUpdate = async () => {
         try {
@@ -54,7 +41,7 @@ const Admin = () => {
                     .filter(Boolean),
             };
 
-            const res = await axios.post(
+            await axios.put(
                 `${import.meta.env.VITE_SERVER_URL}/auth/update-user`,
                 payload,
                 {
@@ -65,20 +52,13 @@ const Admin = () => {
                 }
             );
 
-            // If request is successful
             setEditingUser(null);
             setFormData({ role: "", skills: "" });
             fetchUsers();
-
         } catch (err) {
-            if (err.response) {
-                console.error(err.response.data.error || "Failed to update user");
-            } else {
-                console.error("Update failed", err);
-            }
+            console.error(err.response?.data?.error || "Failed to update user");
         }
     };
-
 
     const handleSearch = (e) => {
         const query = e.target.value.toLowerCase();
@@ -88,44 +68,39 @@ const Admin = () => {
         );
     };
 
-
+    useEffect(() => {
+        fetchUsers();
+    }, []);
 
     return (
-        <div className="max-w-4xl mx-auto mt-10">
-            <h1 className="text-2xl font-bold mb-6">Admin Panel - Manage Users</h1>
+        <div className="max-w-5xl mx-auto mt-10 p-6 bg-gray-50 rounded-xl shadow-lg">
+            <h1 className="text-3xl font-bold mb-8 text-gray-800">
+                Admin Panel <span className="text-blue-600">— Manage Users</span>
+            </h1>
+
             <input
                 type="text"
-                className="w-full mb-6"
-                placeholder="Search by email"
+                className="w-full mb-8 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                placeholder="Search by email..."
                 value={searchQuery}
                 onChange={handleSearch}
             />
+
             {filteredUsers.map((user) => (
                 <div
                     key={user._id}
-                    className="shadow rounded p-4 mb-4 border"
+                    className="bg-white shadow-md rounded-lg p-6 mb-6 border border-gray-200 hover:shadow-lg transition"
                 >
-                    <p>
-                        <strong>Email:</strong> {user.email}
-                    </p>
-                    <p>
-                        <strong>Current Role:</strong> {user.role}
-                    </p>
-                    <p>
-                        <strong>Skills:</strong>{" "}
-                        {user.skills && user.skills.length > 0
-                            ? user.skills.join(", ")
-                            : "N/A"}
-                    </p>
+                    <p className="mb-2"><strong className="text-gray-700">Email:</strong> {user.email}</p>
+                    <p className="mb-2"><strong className="text-gray-700">Role:</strong> {user.role}</p>
+                    <p className="mb-4"><strong className="text-gray-700">Skills:</strong> {user.skills?.length > 0 ? user.skills.join(", ") : "N/A"}</p>
 
                     {editingUser === user.email ? (
-                        <div className="mt-4 space-y-2">
+                        <div className="mt-4 space-y-4">
                             <select
-                                className="w-full"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400"
                                 value={formData.role}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, role: e.target.value })
-                                }
+                                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                             >
                                 <option value="user">User</option>
                                 <option value="moderator">Moderator</option>
@@ -135,22 +110,20 @@ const Admin = () => {
                             <input
                                 type="text"
                                 placeholder="Comma-separated skills"
-                                className="w-full"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400"
                                 value={formData.skills}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, skills: e.target.value })
-                                }
+                                onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
                             />
 
-                            <div className="flex gap-2">
+                            <div className="flex gap-3">
                                 <button
-                                    className=""
+                                    className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-md transition"
                                     onClick={handleUpdate}
                                 >
                                     Save
                                 </button>
                                 <button
-                                    className=""
+                                    className="px-4 py-2 bg-gray-400 hover:bg-gray-500 text-white rounded-lg shadow-md transition"
                                     onClick={() => setEditingUser(null)}
                                 >
                                     Cancel
@@ -159,7 +132,7 @@ const Admin = () => {
                         </div>
                     ) : (
                         <button
-                            className="mt-2"
+                            className="mt-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-md transition"
                             onClick={() => handleEditClick(user)}
                         >
                             Edit
@@ -168,7 +141,7 @@ const Admin = () => {
                 </div>
             ))}
         </div>
-    )
-}
+    );
+};
 
-export default Admin
+export default Admin;

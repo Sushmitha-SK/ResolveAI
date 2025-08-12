@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import axios from "axios";
 
 const Signup = () => {
@@ -73,7 +73,7 @@ const Signup = () => {
           className="mt-2 w-full h-11 rounded-full text-white bg-indigo-500 hover:opacity-90 transition-opacity">
           {loading ? "Signing up..." : "Sign Up"}
         </button>
-        <p className="text-gray-500 text-sm mt-3 mb-11">Already have an account? <a className="text-indigo-500" href="#">Login</a></p>
+        <p className="text-gray-500 text-sm mt-3 mb-11">Already have an account?{" "}<Link to='/login' className="text-indigo-500" >Login</Link></p>
       </form>
     </div>
   )

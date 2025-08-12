@@ -1,8 +1,8 @@
 import { NonRetriableError } from "inngest";
 import User from "../../models/user.js";
-import Ticket from "../../models/ticket.js"
+import Ticket from "../../models/ticket.js";
 import { inngest } from "../client.js";
-import { sendMail } from '../../utils/mailer.js'
+import { sendMail } from "../../utils/mailer.js";
 import analyzeTicket from "../../utils/ai.js";
 
 export const onTicketCreated = inngest.createFunction(
@@ -12,65 +12,69 @@ export const onTicketCreated = inngest.createFunction(
         try {
             const { ticketId } = event.data;
 
-            //fetch ticket from DB
-            const ticket = await step.run("fetch-ticket", async () => {
+            let ticket = await step.run("fetch-ticket", async () => {
                 const ticketObject = await Ticket.findById(ticketId);
-                if (!ticket) {
+                if (!ticketObject) {
                     throw new NonRetriableError("Ticket not found");
                 }
                 return ticketObject;
             });
 
-            await step.run("update-ticket-status", async () => {
-                await Ticket.findByIdAndUpdate(ticket._id, { status: "TODO" });
+            ticket = await step.run("update-ticket-status", async () => {
+                return Ticket.findByIdAndUpdate(
+                    ticket._id,
+                    { status: "TODO" },
+                    { new: true }
+                );
             });
 
             const aiResponse = await analyzeTicket(ticket);
 
-            const relatedskills = await step.run("ai-processing", async () => {
-                let skills = [];
-                if (aiResponse) {
-                    await Ticket.findByIdAndUpdate(ticket._id, {
+            ticket = await step.run("ai-processing", async () => {
+                if (!aiResponse) return ticket;
+
+                return Ticket.findByIdAndUpdate(
+                    ticket._id,
+                    {
                         priority: !["low", "medium", "high"].includes(aiResponse.priority)
                             ? "medium"
                             : aiResponse.priority,
-                        helpfulNotes: aiResponse.helpfulNotes,
+                        helpfulNotes: aiResponse.helpfulNotes || "",
                         status: "IN_PROGRESS",
-                        relatedSkills: aiResponse.relatedSkills,
-                    });
-                    skills = aiResponse.relatedSkills;
-                }
-                return skills;
+                        relatedSkills: aiResponse.relatedSkills || [],
+                    },
+                    { new: true }
+                );
             });
 
             const moderator = await step.run("assign-moderator", async () => {
+                const skillPattern =
+                    ticket.relatedSkills?.length > 0
+                        ? ticket.relatedSkills.join("|")
+                        : ".*";
+
                 let user = await User.findOne({
                     role: "moderator",
-                    skills: {
-                        $elemMatch: {
-                            $regex: relatedskills.join("|"),
-                            $options: "i",
-                        },
-                    },
+                    skills: { $elemMatch: { $regex: skillPattern, $options: "i" } },
                 });
+
                 if (!user) {
-                    user = await User.findOne({
-                        role: "admin",
-                    });
+                    user = await User.findOne({ role: "admin" });
                 }
+
                 await Ticket.findByIdAndUpdate(ticket._id, {
                     assignedTo: user?._id || null,
                 });
+
                 return user;
             });
 
             await step.run("send-email-notification", async () => {
                 if (moderator) {
-                    const finalTicket = await Ticket.findById(ticket._id);
                     await sendMail(
                         moderator.email,
                         "Ticket Assigned",
-                        `A new ticket is assigned to you ${finalTicket.title}`
+                        `A new ticket is assigned to you: ${ticket.title}`
                     );
                 }
             });

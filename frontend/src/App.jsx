@@ -1,41 +1,72 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import CheckAuth from './components/CheckAuth'
 import Tickets from './pages/Tickets'
 import TicketDetails from './pages/TicketDetails'
 import Signup from './pages/Signup'
 import Admin from './pages/Admin'
-import Login from './pages/login'
+import Login from './pages/Login'
 import Navbar from './components/Navbar'
 
-function App() {
+function AppLayout() {
+  const location = useLocation()
+  const hideNavbarPaths = ['/login', '/signup']
+
+  const shouldHideNavbar = hideNavbarPaths.includes(location.pathname)
 
   return (
     <>
-      <BrowserRouter>
-        <Routes>
-          <Route path='/' element={
-            <CheckAuth protected={true}>
+      {!shouldHideNavbar && <Navbar />}
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <CheckAuth protectedRoute={true}>
               <Tickets />
-            </CheckAuth>} />
-          <Route path='/tickets/:id' element={
-            <CheckAuth protected={true}>
+            </CheckAuth>
+          }
+        />
+        <Route
+          path="/tickets/:id"
+          element={
+            <CheckAuth protectedRoute={true}>
               <TicketDetails />
-            </CheckAuth>} />
-          <Route path='/login' element={
-            <CheckAuth protected={false}>
+            </CheckAuth>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <CheckAuth protectedRoute={false}>
               <Login />
-            </CheckAuth>} />
-          <Route path='/signup' element={
-            <CheckAuth protected={false}>
+            </CheckAuth>
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <CheckAuth protectedRoute={false}>
               <Signup />
-            </CheckAuth>} />
-          <Route path='/admin' element={
-            <CheckAuth protected={true}>
+            </CheckAuth>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <CheckAuth protectedRoute={true}>
               <Admin />
-            </CheckAuth>} />
-        </Routes>
-      </BrowserRouter>
+            </CheckAuth>
+          }
+        />
+      </Routes>
     </>
+  )
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppLayout />
+    </BrowserRouter>
   )
 }
 
