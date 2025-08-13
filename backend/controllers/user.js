@@ -105,6 +105,8 @@ export const getUser = async (req, res) => {
 }
 
 
+
+
 export const getPrivilegedUsers = async (req, res) => {
     try {
         if (req.user.role !== "admin") {

@@ -92,3 +92,72 @@ export const onTicketCreated = inngest.createFunction(
     }
 );
 
+
+
+
+export const onTicketClosed = inngest.createFunction(
+    { id: 'on-ticket-closed', retries: 2 },
+    { event: "ticket/closed" },
+    async ({ event, step }) => {
+        try {
+            const { createdBy, title, status } = event.data
+            console.log("Running step for finding ticket owner", { id })
+            const user = await step.run("get-user-email", async () => {
+                const userObj = await User.findById(createdBy)
+                if (!userObj) {
+                    throw new NonRetriableError("User no longer exist in DB")
+                }
+                return userObj
+            })
+
+            await step.run("send-close-ticket-mail", async () => {
+                const subject = `Status of Ticket: ${title} is ${status}.`
+                const messg = `Hi,
+              Check the helpful notes for more information.
+              \n \n
+              Thanks for signing up. Glad to have you!!
+              `
+                await sendMail(user.email, subject, messg);
+            })
+
+            console.log("Ticket closed and email sent to user", { email: user.email })
+
+            return { success: true }
+        } catch (err) {
+            console.error("Error running step", err.message)
+            return { success: false }
+        }
+    }
+)
+
+export const onTicketUpdated = inngest.createFunction(
+    { id: 'on-ticket-updated', retries: 2 },
+    { event: "ticket/updated" },
+    async ({ event, step }) => {
+        try {
+            const { ticketId, status, assignedTo } = event.data
+
+            const moderator = await User.findById(assignedTo);
+            if (!moderator) {
+                throw new NonRetriableError("User no longer exist in DB")
+            }
+
+            await step.run("send-email-notification", async () => {
+                const finalTicket = await Ticket.findById(ticketId)
+                if (moderator) {
+                    await sendMail(
+                        moderator.email,
+                        "Ticket Assigned",
+                        `Please have a look to ticket which is recently assigned to you.
+                      Ticket Id is : ${finalTicket.title}`
+                    )
+                }
+            })
+
+            return { success: true }
+        } catch (err) {
+            console.error("Error running step", err.message)
+            return { success: false }
+        }
+    }
+)
