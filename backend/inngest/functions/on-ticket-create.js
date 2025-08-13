@@ -33,12 +33,12 @@ export const onTicketCreated = inngest.createFunction(
             ticket = await step.run("ai-processing", async () => {
                 if (!aiResponse) return ticket;
 
-                return Ticket.findByIdAndUpdate(
+                return await Ticket.findByIdAndUpdate(
                     ticket._id,
                     {
-                        priority: !["low", "medium", "high"].includes(aiResponse.priority)
-                            ? "medium"
-                            : aiResponse.priority,
+                        priority: ["low", "medium", "high"].includes(aiResponse.priority)
+                            ? aiResponse.priority
+                            : "medium",
                         helpfulNotes: aiResponse.helpfulNotes || "",
                         status: "IN_PROGRESS",
                         relatedSkills: aiResponse.relatedSkills || [],
@@ -46,6 +46,11 @@ export const onTicketCreated = inngest.createFunction(
                     { new: true }
                 );
             });
+
+            // Always fetch the latest ticket after AI update
+            ticket = await Ticket.findById(ticket._id);
+
+            console.log('AI processing', JSON.stringify(aiResponse))
 
             const moderator = await step.run("assign-moderator", async () => {
                 const skillPattern =
@@ -86,3 +91,4 @@ export const onTicketCreated = inngest.createFunction(
         }
     }
 );
+

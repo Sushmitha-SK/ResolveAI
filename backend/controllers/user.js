@@ -103,3 +103,19 @@ export const getUser = async (req, res) => {
 
     }
 }
+
+
+export const getPrivilegedUsers = async (req, res) => {
+    try {
+        if (req.user.role !== "admin") {
+            return res.status(403).json({ error: "Forbidden" })
+        }
+        const users = await User.find({ role: { $nin: ["user"] } }).select("-password")
+        return res.json(users)
+    } catch (error) {
+        res.status(500).json({
+            error: "User find failed",
+            details: error.message
+        });
+    }
+}
