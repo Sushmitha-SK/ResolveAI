@@ -6,9 +6,9 @@ import { inngest } from '../inngest/client.js'
 export const signup = async (req, res) => {
     const { email, password, skills = [] } = req.body
     try {
-        const hashed = bcrypt.hash(password, 10)
+        const hashed = await bcrypt.hash(password, 10)
         const user = await User.create({ email, password: hashed, skills })
-
+        console.log('User signup', JSON.stringify(user))
         //Fire inngest event
         await inngest.send({
             name: "user/signup",
@@ -32,23 +32,23 @@ export const login = async (req, res) => {
     const { email, password } = req.body
 
     try {
-        const user = User.findOne({ email })
+        const user = await User.findOne({ email })
         if (!user) return res.status(401).json({ error: "User not found" })
-        const isMatch = bcrypt.compare(password, user.password);
 
-        if (!isMatch) {
-            return res.status(401).json({ error: "Invalid credentials" })
-        }
+        const isMatch = await bcrypt.compare(password, user.password)
+        if (!isMatch) return res.status(401).json({ error: "Invalid credentials" })
 
-        const token = jwt.sign({
-            _id: user._id, role: user.role
-        }, process.env.JWT_SECRET)
+        const token = jwt.sign(
+            { _id: user._id, role: user.role },
+            process.env.JWT_SECRET
+        )
 
-        res.json({ user, token })
+        const safeUser = user.toObject()
+        delete safeUser.password
 
+        res.json({ user: safeUser, token })
     } catch (error) {
         res.status(500).json({ error: 'Login failed', details: error.message })
-
     }
 }
 
@@ -101,5 +101,23 @@ export const getUser = async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: 'Failed to get users', details: error.message })
 
+    }
+}
+
+
+
+
+export const getPrivilegedUsers = async (req, res) => {
+    try {
+        if (req.user.role !== "admin") {
+            return res.status(403).json({ error: "Forbidden" })
+        }
+        const users = await User.find({ role: { $nin: ["user"] } }).select("-password")
+        return res.json(users)
+    } catch (error) {
+        res.status(500).json({
+            error: "User find failed",
+            details: error.message
+        });
     }
 }
